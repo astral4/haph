@@ -8,9 +8,14 @@ mod generate;
 
 extern crate alloc;
 
-use core::hash::Hasher;
+use alloc::vec::Vec;
+use core::hash::{Hash, Hasher};
+use foldhash::{HashSet, HashSetExt};
 use num_traits::bounds::UpperBounded;
-use num_traits::{Unsigned, WrappingAdd, WrappingMul, Zero};
+use num_traits::{AsPrimitive, Unsigned, WrappingAdd, WrappingMul, Zero};
+use rand::distributions::Standard;
+use rand::prelude::Distribution;
+use rand::{Rng, SeedableRng};
 use usize_cast::IntoUsize;
 
 pub trait MapHasher<S, H>: Hasher
@@ -20,4 +25,71 @@ where
     fn new_with_seed(seed: &S) -> Self;
 
     fn finish_triple(&self) -> (H, H, H);
+}
+
+pub struct Map<S, H, K, V> {
+    seed: S,
+    displacements: Vec<(H, H)>,
+    entries: Vec<(K, V)>,
+}
+
+impl<S, H, K, V> Map<S, H, K, V> {
+    pub fn new<R, M>(entries: Vec<(K, V)>) -> Self
+    where
+        R: SeedableRng + Rng,
+        M: MapHasher<S, H>,
+        H: 'static + UpperBounded + Unsigned + IntoUsize + Zero + Copy + WrappingMul + WrappingAdd,
+        K: Eq + Hash,
+        Standard: Distribution<S>,
+        usize: AsPrimitive<H>,
+    {
+        assert!(
+            entries.len() <= H::max_value().into_usize(),
+            "cannot have more entries than possible hash values"
+        );
+
+        let keys: Vec<_> = entries.iter().map(|entry| &entry.0).collect();
+
+        assert!(!has_duplicates(&keys), "duplicate key present");
+
+        let (seed, state) = generate::generate::<R, _, M, _, _>(&keys);
+
+        let mut entries = entries;
+        sort_by_indices(&mut entries, state.indices);
+
+        Self {
+            seed,
+            displacements: state.displacements,
+            entries,
+        }
+    }
+}
+
+fn has_duplicates<T: Eq + Hash>(items: &[T]) -> bool {
+    let mut set = HashSet::with_capacity(items.len());
+
+    for item in items {
+        if !set.insert(item) {
+            return true;
+        }
+    }
+
+    false
+}
+
+fn sort_by_indices<T>(data: &mut [T], mut indices: Vec<usize>) {
+    for idx in 0..data.len() {
+        if indices[idx] != idx {
+            let mut current_idx = idx;
+            loop {
+                let target_idx = indices[current_idx];
+                indices[current_idx] = current_idx;
+                if indices[target_idx] == target_idx {
+                    break;
+                }
+                data.swap(current_idx, target_idx);
+                current_idx = target_idx;
+            }
+        }
+    }
 }
