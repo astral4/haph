@@ -13,10 +13,10 @@ keywords = ["map", "phf", "set"]
 categories = ["data-structures"]
 
 [dependencies]
-foldhash = "0.1.3"
-num-traits = "0.2.18"
-rand = "0.8.5"
-usize_cast = "1.1.0"
+foldhash = "0.1"
+num-traits = "0.2"
+rand = "0.8"
+usize_cast = "1"
 
 [lints.rust]
 async_fn_in_trait = "allow"
