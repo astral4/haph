@@ -121,6 +121,9 @@ where
 }
 
 #[allow(clippy::needless_pass_by_value)]
-pub(crate) fn displace<T: WrappingMul + WrappingAdd>(f1: T, f2: T, d1: T, d2: T) -> T {
+pub(crate) fn displace<T>(f1: T, f2: T, d1: T, d2: T) -> T
+where
+    T: WrappingMul + WrappingAdd,
+{
     f1.wrapping_mul(&d1).wrapping_add(&f2).wrapping_add(&d2)
 }

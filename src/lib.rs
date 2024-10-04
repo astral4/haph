@@ -9,7 +9,9 @@ mod generate;
 extern crate alloc;
 
 use alloc::vec::Vec;
+use core::borrow::Borrow;
 use core::hash::{Hash, Hasher};
+use core::marker::PhantomData;
 use foldhash::{HashSet, HashSetExt};
 use num_traits::bounds::UpperBounded;
 use num_traits::{AsPrimitive, Unsigned, WrappingAdd, WrappingMul, Zero};
@@ -27,19 +29,20 @@ where
     fn finish_triple(&self) -> (H, H, H);
 }
 
-pub struct Map<S, H, K, V> {
+pub struct Map<M, S, H, K, V> {
     seed: S,
     displacements: Vec<(H, H)>,
     entries: Vec<(K, V)>,
+    _marker: PhantomData<M>,
 }
 
-impl<S, H, K, V> Map<S, H, K, V> {
-    pub fn new<R, M>(entries: Vec<(K, V)>) -> Self
+impl<M, S, H, K, V> Map<M, S, H, K, V> {
+    pub fn new<R>(entries: Vec<(K, V)>) -> Self
     where
         R: SeedableRng + Rng,
+        K: Eq + Hash,
         M: MapHasher<S, H>,
         H: 'static + UpperBounded + Unsigned + IntoUsize + Zero + Copy + WrappingMul + WrappingAdd,
-        K: Eq + Hash,
         Standard: Distribution<S>,
         usize: AsPrimitive<H>,
     {
@@ -61,6 +64,7 @@ impl<S, H, K, V> Map<S, H, K, V> {
             seed,
             displacements: state.displacements,
             entries,
+            _marker: PhantomData,
         }
     }
 }
@@ -90,6 +94,32 @@ fn sort_by_indices<T>(data: &mut [T], mut indices: Vec<usize>) {
                 data.swap(current_idx, target_idx);
                 current_idx = target_idx;
             }
+        }
+    }
+}
+
+impl<M, S, H, K, V> Map<M, S, H, K, V> {
+    pub fn get_entry<Q>(&self, key: &Q) -> Option<(&K, &V)>
+    where
+        Q: Hash + Eq + ?Sized,
+        K: Borrow<Q>,
+        M: MapHasher<S, H>,
+        H: 'static + UpperBounded + Unsigned + IntoUsize + Zero + Copy + WrappingMul + WrappingAdd,
+    {
+        if self.displacements.is_empty() {
+            return None;
+        }
+
+        let hashes = generate::hash::<_, M, _, _>(key, &self.seed);
+        let (d1, d2) = self.displacements[hashes.0.into_usize() % self.displacements.len()];
+        let index =
+            generate::displace(hashes.1, hashes.2, d1, d2).into_usize() % self.entries.len();
+        let entry = &self.entries[index];
+
+        if entry.0.borrow() == key {
+            Some((&entry.0, &entry.1))
+        } else {
+            None
         }
     }
 }
