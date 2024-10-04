@@ -13,23 +13,11 @@ use num_traits::bounds::UpperBounded;
 use num_traits::{Unsigned, WrappingAdd, WrappingMul, Zero};
 use usize_cast::IntoUsize;
 
-pub trait MapHasher<S>: Hasher {
-    type Hash: 'static
-        + UpperBounded
-        + Unsigned
-        + IntoUsize
-        + Zero
-        + Copy
-        + WrappingMul
-        + WrappingAdd;
-
+pub trait MapHasher<S, H>: Hasher
+where
+    H: 'static + UpperBounded + Unsigned + IntoUsize + Zero + Copy + WrappingMul + WrappingAdd,
+{
     fn new_with_seed(seed: &S) -> Self;
 
-    fn finish_triple(&self) -> Hashes<Self, S>;
+    fn finish_triple(&self) -> (H, H, H);
 }
-
-pub type Hashes<M, S> = (
-    <M as MapHasher<S>>::Hash,
-    <M as MapHasher<S>>::Hash,
-    <M as MapHasher<S>>::Hash,
-);

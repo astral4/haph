@@ -1,8 +1,9 @@
-use super::{Hashes, MapHasher};
+use super::MapHasher;
 use alloc::vec;
 use alloc::vec::Vec;
 use core::hash::Hash;
-use num_traits::{AsPrimitive, WrappingAdd, WrappingMul, Zero};
+use num_traits::bounds::UpperBounded;
+use num_traits::{AsPrimitive, Unsigned, WrappingAdd, WrappingMul, Zero};
 use rand::distributions::{Distribution, Standard};
 use rand::{Rng, SeedableRng};
 use usize_cast::IntoUsize;
@@ -11,8 +12,8 @@ const FIXED_SEED: u64 = 42;
 
 const LAMBDA: usize = 5;
 
-pub(crate) struct MapState<S, M: MapHasher<S>> {
-    pub(crate) displacements: Vec<(M::Hash, M::Hash)>,
+pub(crate) struct MapState<H> {
+    pub(crate) displacements: Vec<(H, H)>,
     pub(crate) indices: Vec<usize>,
 }
 
@@ -30,30 +31,32 @@ impl Bucket {
     }
 }
 
-pub(crate) fn generate<R, T, M, S>(entries: &[T]) -> (S, MapState<S, M>)
+pub(crate) fn generate<R, T, M, S, H>(entries: &[T]) -> (S, MapState<H>)
 where
     R: SeedableRng + Rng,
     T: Hash,
-    M: MapHasher<S>,
+    M: MapHasher<S, H>,
+    H: 'static + UpperBounded + Unsigned + IntoUsize + Zero + Copy + WrappingMul + WrappingAdd,
     Standard: Distribution<S>,
-    usize: AsPrimitive<M::Hash>,
+    usize: AsPrimitive<H>,
 {
     R::seed_from_u64(FIXED_SEED)
         .sample_iter(Standard)
         .find_map(|seed| {
             let hashes: Vec<_> = entries
                 .iter()
-                .map(|entry| hash::<_, M, _>(entry, &seed))
+                .map(|entry| hash::<_, M, _, _>(entry, &seed))
                 .collect();
-            try_generate(&hashes).map(|s| (seed, s))
+            try_generate::<M, _, _>(&hashes).map(|s| (seed, s))
         })
         .expect("failed to obtain PHF")
 }
 
-fn try_generate<M, S>(hashes: &[Hashes<M, S>]) -> Option<MapState<S, M>>
+fn try_generate<M, S, H>(hashes: &[(H, H, H)]) -> Option<MapState<H>>
 where
-    M: MapHasher<S>,
-    usize: AsPrimitive<M::Hash>,
+    M: MapHasher<S, H>,
+    H: 'static + UpperBounded + Unsigned + IntoUsize + Zero + Copy + WrappingMul + WrappingAdd,
+    usize: AsPrimitive<H>,
 {
     let table_len = hashes.len();
     let num_buckets = table_len.div_ceil(LAMBDA);
@@ -65,7 +68,7 @@ where
     }
     buckets.sort_by(|a, b| Ord::cmp(&a.keys.len(), &b.keys.len()).reverse());
 
-    let mut displacements = vec![(M::Hash::zero(), M::Hash::zero()); num_buckets];
+    let mut displacements = vec![(H::zero(), H::zero()); num_buckets];
     let mut map = vec![None; table_len];
     let mut try_map = vec![0u64; table_len];
     let mut generation = 0;
@@ -106,11 +109,11 @@ where
     })
 }
 
-// pub(crate) fn hash<T: Hash, M: MapHasher<S>, S>(x: T, seed: &S) -> Hashes<M, S> {
-pub(crate) fn hash<T, M, S>(x: T, seed: &S) -> Hashes<M, S>
+pub(crate) fn hash<T, M, S, H>(x: T, seed: &S) -> (H, H, H)
 where
     T: Hash,
-    M: MapHasher<S>,
+    M: MapHasher<S, H>,
+    H: 'static + UpperBounded + Unsigned + IntoUsize + Zero + Copy + WrappingMul + WrappingAdd,
 {
     let mut hasher = M::new_with_seed(seed);
     x.hash(&mut hasher);
