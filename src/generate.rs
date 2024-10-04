@@ -23,6 +23,7 @@ struct Bucket {
 }
 
 impl Bucket {
+    #[inline]
     fn new(index: usize) -> Self {
         Self {
             index,
@@ -31,6 +32,7 @@ impl Bucket {
     }
 }
 
+#[inline]
 pub(crate) fn generate<R, T, M, S, H>(entries: &[T]) -> (S, MapState<H>)
 where
     R: SeedableRng + Rng,
@@ -52,6 +54,7 @@ where
         .expect("failed to obtain PHF")
 }
 
+#[inline]
 fn try_generate<M, S, H>(hashes: &[(H, H, H)]) -> Option<MapState<H>>
 where
     M: MapHasher<S, H>,
@@ -109,6 +112,7 @@ where
     })
 }
 
+#[inline]
 pub(crate) fn hash<T, M, S, H>(x: T, seed: &S) -> (H, H, H)
 where
     T: Hash,
@@ -121,6 +125,7 @@ where
 }
 
 #[allow(clippy::needless_pass_by_value)]
+#[inline]
 pub(crate) fn displace<T>(f1: T, f2: T, d1: T, d2: T) -> T
 where
     T: WrappingMul + WrappingAdd,

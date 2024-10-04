@@ -69,6 +69,7 @@ impl<M, S, H, K, V> Map<M, S, H, K, V> {
     }
 }
 
+#[inline]
 fn has_duplicates<T: Eq + Hash>(items: &[T]) -> bool {
     let mut set = HashSet::with_capacity(items.len());
 
@@ -81,6 +82,7 @@ fn has_duplicates<T: Eq + Hash>(items: &[T]) -> bool {
     false
 }
 
+#[inline]
 fn sort_by_indices<T>(data: &mut [T], mut indices: Vec<usize>) {
     for idx in 0..data.len() {
         if indices[idx] != idx {
