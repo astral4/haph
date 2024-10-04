@@ -3,7 +3,7 @@ name = "haph"
 version = "0.0.0"
 authors = ["astral4"]
 edition = "2021"
-rust-version = "1.56"
+rust-version = "1.73"
 description = "Hasher-agnostic static hashmaps"
 documentation = "https://docs.rs/haph"
 readme = "README.md"
@@ -13,6 +13,9 @@ keywords = ["map", "phf", "set"]
 categories = ["data-structures"]
 
 [dependencies]
+num-traits = "0.2.18"
+rand = "0.8.5"
+usize_cast = "1.1.0"
 
 [lints.rust]
 async_fn_in_trait = "allow"
