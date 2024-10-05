@@ -51,7 +51,7 @@ where
                 .collect();
             try_generate(&hashes).map(|s| (seed, s))
         })
-        .expect("failed to obtain PHF")
+        .expect("failed to find perfect hash function")
 }
 
 #[inline]
