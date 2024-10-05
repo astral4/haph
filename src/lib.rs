@@ -155,4 +155,37 @@ mod test {
             assert!(map.get_entry(&key).is_none());
         }
     }
+
+    #[test]
+    fn single() {
+        type Key = u8;
+
+        let map = Map::<FoldHasher, _, _, Key, &str>::new::<StdRng>(vec![(Key::MAX, "foo")]);
+
+        for key in Key::MIN..Key::MAX {
+            assert!(map.get_entry(&key).is_none());
+        }
+
+        assert_eq!(map.get_entry(&Key::MAX), Some((&Key::MAX, &"foo")));
+    }
+
+    #[test]
+    fn multiple() {
+        type Key = u8;
+
+        let entries = vec![(1, "foo"), (3, "bar"), (9, "baz")];
+        let keys: Vec<_> = entries.clone().into_iter().map(|(k, _)| k).collect();
+
+        let map = Map::<FoldHasher, _, _, Key, &str>::new::<StdRng>(entries);
+
+        for key in Key::MIN..=Key::MAX {
+            if !keys.contains(&key) {
+                assert!(map.get_entry(&key).is_none());
+            }
+        }
+
+        assert_eq!(map.get_entry(&1), Some((&1, &"foo")));
+        assert_eq!(map.get_entry(&3), Some((&3, &"bar")));
+        assert_eq!(map.get_entry(&9), Some((&9, &"baz")));
+    }
 }
