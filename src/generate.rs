@@ -8,7 +8,7 @@ use rand::distributions::{Distribution, Standard};
 use rand::{Rng, SeedableRng};
 use usize_cast::IntoUsize;
 
-const FIXED_SEED: u64 = 42;
+const FIXED_SEED: u64 = 310_514_310_514_310_514;
 
 const LAMBDA: usize = 5;
 
