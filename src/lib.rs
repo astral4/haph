@@ -125,3 +125,34 @@ impl<M, S, H, K, V> Map<M, S, H, K, V> {
         }
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::{Map, MapHasher};
+    use core::hash::{BuildHasher, Hasher};
+    use foldhash::quality::{FixedState, FoldHasher};
+    use rand::rngs::StdRng;
+
+    impl MapHasher<u64, u16> for FoldHasher {
+        fn new_with_seed(seed: &u64) -> Self {
+            FixedState::with_seed(*seed).build_hasher()
+        }
+
+        #[allow(clippy::cast_possible_truncation)]
+        fn finish_triple(&self) -> (u16, u16, u16) {
+            let output = self.finish();
+            ((output >> 32) as u16, (output >> 16) as u16, output as u16)
+        }
+    }
+
+    #[test]
+    fn empty() {
+        type Key = u8;
+
+        let map = Map::<FoldHasher, _, _, Key, ()>::new::<StdRng>(vec![]);
+
+        for key in Key::MIN..=Key::MAX {
+            assert!(map.get_entry(&key).is_none());
+        }
+    }
+}
