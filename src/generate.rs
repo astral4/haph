@@ -49,16 +49,15 @@ where
                 .iter()
                 .map(|entry| hash::<_, M, _, _>(entry, &seed))
                 .collect();
-            try_generate::<M, _, _>(&hashes).map(|s| (seed, s))
+            try_generate(&hashes).map(|s| (seed, s))
         })
         .expect("failed to obtain PHF")
 }
 
 #[inline]
-fn try_generate<M, S, H>(hashes: &[(H, H, H)]) -> Option<MapState<H>>
+fn try_generate<H>(hashes: &[(H, H, H)]) -> Option<MapState<H>>
 where
-    M: MapHasher<S, H>,
-    H: 'static + UpperBounded + Unsigned + IntoUsize + Zero + Copy + WrappingMul + WrappingAdd,
+    H: 'static + IntoUsize + Zero + Copy + WrappingMul + WrappingAdd,
     usize: AsPrimitive<H>,
 {
     let table_len = hashes.len();
